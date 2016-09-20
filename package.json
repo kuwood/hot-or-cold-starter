@@ -21,7 +21,8 @@
   "homepage": "https://github.com/kuwood/hot-or-cold-starter#readme",
   "dependencies": {
     "react": "^15.3.2",
-    "react-dom": "^15.3.2"
+    "react-dom": "^15.3.2",
+    "redux": "^3.6.0"
   },
   "devDependencies": {
     "babel-core": "^6.14.0",
