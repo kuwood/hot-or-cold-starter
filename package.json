@@ -26,6 +26,9 @@
   },
   "homepage": "https://github.com/kuwood/hot-or-cold-starter#readme",
   "dependencies": {
+    "body-parser": "^1.15.2",
+    "express": "^4.14.0",
+    "mongoose": "^4.6.1",
     "react": "^15.3.2",
     "react-dom": "^15.3.2",
     "react-redux": "^4.4.5",
