@@ -6,6 +6,7 @@ function randomInt(min, max) {
 
 let initialGameState = {
     targetNum: randomInt(1, 101),
+    feedback: "Make a Guess (numbers only)",
     guessCount: 0,
     guesses: []
 };
@@ -14,10 +15,44 @@ let gameReducer = (state, action) => {
     state = state || initialGameState
 
     if (action.type === actions.NEW_GAME) {
-        return state = Object.assign({}, initialGameState, {targetNum: randomInt(1,101)})
+        return Object.assign({}, initialGameState, {targetNum: randomInt(1,101)})
     } else if (action.type === actions.ADD_GUESS) {
-        return Object.assign({}, state, {guessCount: state.guessCount += 1, guesses: state.guesses.concat(action.number)})
+        //TODO: feedback rules
+        let guess = action.number;
+        let targetNum = state.targetNum
+        let diff;
+        let feedback;
+        //find the guess/targetnum difference
+        if (guess - targetNum < 0) {
+          diff = (guess - targetNum) * -1;
+        } else {
+          diff = guess - targetNum;
+        }
+        //set feedback
+        if (diff > 50) {
+          feedback = 'Ice cold!'
+          console.log('ice cold')
+      } else if (diff > 30 && diff <= 50) {
+          feedback = 'Cold!'
+          console.log('cold')
+      } else if (diff > 20 && diff <= 30) {
+          feedback = 'Warm!'
+          console.log('warm')
+      } else if (diff > 10 && diff <= 20) {
+          feedback = 'Hot!'
+          console.log('hot')
+      } else if (diff > 0 && diff <= 10) {
+          feedback = 'Very hot!'
+          console.log('Very hot')
+      } else if (diff === 0) {
+          feedback = 'Bingo!'
+          console.log('bingo!')
+        } else {
+          console.log('error you did something wrong')
+        }
+        return Object.assign({}, state, {guessCount: state.guessCount += 1, guesses: state.guesses.concat(action.number), feedback: feedback})
     }
+    console.log(state);
     return state;
 }
 
