@@ -46,6 +46,7 @@ let gameReducer = (state, action) => {
           console.log('Very hot')
       } else if (diff === 0) {
           feedback = 'Bingo!'
+          alert("You won! Feel free to start a new game using the button below")
           console.log('bingo!')
         } else {
           console.log('error you did something wrong')
