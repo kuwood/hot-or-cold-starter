@@ -6,8 +6,15 @@ let GuessSubmit = React.createClass ({
     submitGuess: function() {
         let guess = this.refs.textInput.value
         this.props.dispatch(actions.addGuess(guess));
+        if (this.props.feedback === 'Bingo!') {
+            this.props.dispatch(actions.sendGuess(this.props.guesses.length))
+        }
     },
-
+    componentDidUpdate: function() {
+        if (this.props.feedback === 'Bingo!') {
+            this.props.dispatch(actions.sendGuess(this.props.guesses.length))
+        }    
+    },
     render: function() {
 
         return (
@@ -21,11 +28,12 @@ let GuessSubmit = React.createClass ({
     }
 });
 
-// let mapStateToProps = (state, props) => {
-//     return {
-//         guesses: state.guesses
-//     }
-// }
+let mapStateToProps = (state, props) => {
+    return {
+        guesses: state.guesses,
+        feedback: state.feedback
+    }
+}
 
-let Container = connect()(GuessSubmit)
+let Container = connect(mapStateToProps)(GuessSubmit)
 module.exports = Container;

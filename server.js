@@ -31,15 +31,17 @@ app.get('/fewest-guesses', (req, res) => {
 });
 
 app.post('/fewest-guesses', (req, res) => {
+    //find guess document
     Guess.findOne((err, guess) => {
         if (err) {
             return res.status(500).json({
                 message: 'Internal Server Error'
             });
         }
-        if (guess.guess > req.body.guess) {
+        //if req guess is less than guess in db. update the document
+        if (guess.fewestGuesses > req.body.fewestGuesses) {
             Guess.update({
-                guess: req.body.guess
+                fewestGuesses: req.body.fewestGuesses
             }, (err, guess) => {
                 if (err) {
                     return res.status(500).json({

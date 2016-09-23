@@ -51,12 +51,16 @@
 	var connect = __webpack_require__(172).connect;
 	var Provider = __webpack_require__(172).Provider;
 	var store = __webpack_require__(195);
-	var actions = __webpack_require__(197);
-	var GuessSubmit = __webpack_require__(198);
+	var actions = __webpack_require__(198);
+	var GuessSubmit = __webpack_require__(201);
 	
 	var Game = React.createClass({
 	    displayName: 'Game',
 	
+	    componentDidMount: function componentDidMount() {
+	        console.log(this.props.fewestGuesses, " props fewestGuesses");
+	        this.props.dispatch(actions.fetchGuesses(this.props.fewestGuesses));
+	    },
 	    newGame: function newGame() {
 	        this.props.dispatch(actions.newGame());
 	    },
@@ -68,6 +72,7 @@
 	                guess
 	            );
 	        });
+	        console.log(guesses[guesses.length - 1], "most recent guess");
 	        return React.createElement(
 	            'div',
 	            null,
@@ -83,15 +88,21 @@
 	            ),
 	            React.createElement(GuessSubmit, null),
 	            React.createElement(
+	                'ul',
+	                null,
+	                guesses
+	            ),
+	            React.createElement(
 	                'h4',
 	                null,
 	                'Total Guesses: ',
 	                this.props.guesses.length
 	            ),
 	            React.createElement(
-	                'ul',
+	                'h4',
 	                null,
-	                guesses
+	                'Fewest guesses record: ',
+	                this.props.fewestGuesses
 	            ),
 	            React.createElement(
 	                'button',
@@ -105,6 +116,7 @@
 	var mapStateToProps = function mapStateToProps(state, props) {
 	    return {
 	        guesses: state.guesses,
+	        fewestGuesses: state.fewestGuesses,
 	        feedback: state.feedback
 	    };
 	};
@@ -23167,19 +23179,49 @@
 	
 	var redux = __webpack_require__(179);
 	var createStore = redux.createStore;
+	var applyMiddleware = redux.applyMiddleware;
+	var thunk = __webpack_require__(196).default;
 	
-	var reducers = __webpack_require__(196);
+	var reducers = __webpack_require__(197);
 	
-	var store = createStore(reducers.gameReducer);
+	var store = createStore(reducers.gameReducer, applyMiddleware(thunk));
 	module.exports = store;
 
 /***/ },
 /* 196 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	exports.__esModule = true;
+	function createThunkMiddleware(extraArgument) {
+	  return function (_ref) {
+	    var dispatch = _ref.dispatch;
+	    var getState = _ref.getState;
+	    return function (next) {
+	      return function (action) {
+	        if (typeof action === 'function') {
+	          return action(dispatch, getState, extraArgument);
+	        }
+	
+	        return next(action);
+	      };
+	    };
+	  };
+	}
+	
+	var thunk = createThunkMiddleware();
+	thunk.withExtraArgument = createThunkMiddleware;
+	
+	exports['default'] = thunk;
+
+/***/ },
+/* 197 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var actions = __webpack_require__(197);
+	var actions = __webpack_require__(198);
 	
 	function randomInt(min, max) {
 	    return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -23189,7 +23231,8 @@
 	    targetNum: randomInt(1, 101),
 	    feedback: "Make a Guess (numbers only)",
 	    guessCount: 0,
-	    guesses: []
+	    guesses: [],
+	    fewestGuesses: null
 	};
 	
 	var gameReducer = function gameReducer(state, action) {
@@ -23233,6 +23276,10 @@
 	            console.log('error you did something wrong');
 	        }
 	        return Object.assign({}, state, { guessCount: state.guessCount += 1, guesses: state.guesses.concat(action.number), feedback: feedback });
+	    } else if (action.type === actions.FETCH_FEWEST_GUESSES) {
+	        return Object.assign({}, state, { fewestGuesses: action.fewestGuesses });
+	    } else if (action.type === actions.SAVE_FEWEST_GUESSES) {
+	        return Object.assign({}, state, { fewestGuesses: action.fewestGuesses });
 	    }
 	    console.log(state);
 	    return state;
@@ -23241,22 +23288,15 @@
 	exports.gameReducer = gameReducer;
 
 /***/ },
-/* 197 */
-/***/ function(module, exports) {
+/* 198 */
+/***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	Object.defineProperty(exports, "__esModule", {
 	    value: true
 	});
-	// generate winning number
-	// making a guess (action)
-	// feedback
-	// guess history
-	// guess number
-	// correct guess
-	// new game(generate new number)(action)
-	// clear guess history
+	var fetch = __webpack_require__(199);
 	
 	var ADD_GUESS = exports.ADD_GUESS = 'ADD_GUESS';
 	var addGuess = exports.addGuess = function addGuess(number) {
@@ -23273,20 +23313,536 @@
 	    };
 	};
 	
-	// exports.ADD_GUESS = ADD_GUESS;
-	// exports.addGuess = addGuess;
-	// exports.NEW_GAME = NEW_GAME;
-	// exports.newGame = newGame;
+	var FETCH_FEWEST_GUESSES = exports.FETCH_FEWEST_GUESSES = 'FETCH_FEWEST_GUESSES';
+	var fetchFewestGuesses = exports.fetchFewestGuesses = function fetchFewestGuesses(fewestGuesses) {
+	    return {
+	        type: FETCH_FEWEST_GUESSES,
+	        fewestGuesses: fewestGuesses
+	    };
+	};
+	
+	var SAVE_FEWEST_GUESSES = exports.SAVE_FEWEST_GUESSES = 'SAVE_FEWEST_GUESSES';
+	var saveFewestGuesses = exports.saveFewestGuesses = function saveFewestGuesses(fewestGuesses) {
+	    return {
+	        type: SAVE_FEWEST_GUESSES,
+	        fewestGuesses: fewestGuesses
+	    };
+	};
+	
+	var fetchGuesses = exports.fetchGuesses = function fetchGuesses() {
+	    return function (dispatch) {
+	        var url = 'http://localhost:8080/fewest-guesses';
+	        return fetch(url).then(function (response) {
+	            if (response.status < 200 || response.status >= 300) {
+	                var error = new Error(response.statusText);
+	                error.response = response;
+	                throw error;
+	            }
+	            console.log(response);
+	            return response.json();
+	        }).then(function (data) {
+	            var guess = data[0].fewestGuesses;
+	            console.log(data[0], "guess for dispatch");
+	            return dispatch(fetchFewestGuesses(guess));
+	        }).catch(function (error) {
+	            console.log(error);
+	        });
+	    };
+	};
+	
+	var sendGuess = exports.sendGuess = function sendGuess(numberOfGuesses) {
+	    console.log(numberOfGuesses, "params");
+	    return function (dispatch) {
+	        var url = 'http://localhost:8080/fewest-guesses';
+	        return fetch(url, {
+	            method: 'POST',
+	            headers: {
+	                'Content-Type': 'application/json'
+	            },
+	            body: JSON.stringify({ numberOfGuesses: numberOfGuesses })
+	        }).then(function (response) {
+	            if (response.status < 200 || response.status >= 300) {
+	                var error = new Error(response.statusText);
+	                error.response = response;
+	                throw error;
+	            }
+	            console.log(response);
+	            return response.json();
+	        }).then(function (data) {
+	            return dispatch(saveFewestGuesses(numberOfGuesses));
+	        }).catch(function (error) {
+	            console.log(error);
+	        });
+	    };
+	};
 
 /***/ },
-/* 198 */
+/* 199 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	// the whatwg-fetch polyfill installs the fetch() function
+	// on the global object (window or self)
+	//
+	// Return that as the export for use in Webpack, Browserify etc.
+	__webpack_require__(200);
+	module.exports = self.fetch.bind(self);
+
+/***/ },
+/* 200 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	(function (self) {
+	  'use strict';
+	
+	  if (self.fetch) {
+	    return;
+	  }
+	
+	  var support = {
+	    searchParams: 'URLSearchParams' in self,
+	    iterable: 'Symbol' in self && 'iterator' in Symbol,
+	    blob: 'FileReader' in self && 'Blob' in self && function () {
+	      try {
+	        new Blob();
+	        return true;
+	      } catch (e) {
+	        return false;
+	      }
+	    }(),
+	    formData: 'FormData' in self,
+	    arrayBuffer: 'ArrayBuffer' in self
+	  };
+	
+	  function normalizeName(name) {
+	    if (typeof name !== 'string') {
+	      name = String(name);
+	    }
+	    if (/[^a-z0-9\-#$%&'*+.\^_`|~]/i.test(name)) {
+	      throw new TypeError('Invalid character in header field name');
+	    }
+	    return name.toLowerCase();
+	  }
+	
+	  function normalizeValue(value) {
+	    if (typeof value !== 'string') {
+	      value = String(value);
+	    }
+	    return value;
+	  }
+	
+	  // Build a destructive iterator for the value list
+	  function iteratorFor(items) {
+	    var iterator = {
+	      next: function next() {
+	        var value = items.shift();
+	        return { done: value === undefined, value: value };
+	      }
+	    };
+	
+	    if (support.iterable) {
+	      iterator[Symbol.iterator] = function () {
+	        return iterator;
+	      };
+	    }
+	
+	    return iterator;
+	  }
+	
+	  function Headers(headers) {
+	    this.map = {};
+	
+	    if (headers instanceof Headers) {
+	      headers.forEach(function (value, name) {
+	        this.append(name, value);
+	      }, this);
+	    } else if (headers) {
+	      Object.getOwnPropertyNames(headers).forEach(function (name) {
+	        this.append(name, headers[name]);
+	      }, this);
+	    }
+	  }
+	
+	  Headers.prototype.append = function (name, value) {
+	    name = normalizeName(name);
+	    value = normalizeValue(value);
+	    var list = this.map[name];
+	    if (!list) {
+	      list = [];
+	      this.map[name] = list;
+	    }
+	    list.push(value);
+	  };
+	
+	  Headers.prototype['delete'] = function (name) {
+	    delete this.map[normalizeName(name)];
+	  };
+	
+	  Headers.prototype.get = function (name) {
+	    var values = this.map[normalizeName(name)];
+	    return values ? values[0] : null;
+	  };
+	
+	  Headers.prototype.getAll = function (name) {
+	    return this.map[normalizeName(name)] || [];
+	  };
+	
+	  Headers.prototype.has = function (name) {
+	    return this.map.hasOwnProperty(normalizeName(name));
+	  };
+	
+	  Headers.prototype.set = function (name, value) {
+	    this.map[normalizeName(name)] = [normalizeValue(value)];
+	  };
+	
+	  Headers.prototype.forEach = function (callback, thisArg) {
+	    Object.getOwnPropertyNames(this.map).forEach(function (name) {
+	      this.map[name].forEach(function (value) {
+	        callback.call(thisArg, value, name, this);
+	      }, this);
+	    }, this);
+	  };
+	
+	  Headers.prototype.keys = function () {
+	    var items = [];
+	    this.forEach(function (value, name) {
+	      items.push(name);
+	    });
+	    return iteratorFor(items);
+	  };
+	
+	  Headers.prototype.values = function () {
+	    var items = [];
+	    this.forEach(function (value) {
+	      items.push(value);
+	    });
+	    return iteratorFor(items);
+	  };
+	
+	  Headers.prototype.entries = function () {
+	    var items = [];
+	    this.forEach(function (value, name) {
+	      items.push([name, value]);
+	    });
+	    return iteratorFor(items);
+	  };
+	
+	  if (support.iterable) {
+	    Headers.prototype[Symbol.iterator] = Headers.prototype.entries;
+	  }
+	
+	  function consumed(body) {
+	    if (body.bodyUsed) {
+	      return Promise.reject(new TypeError('Already read'));
+	    }
+	    body.bodyUsed = true;
+	  }
+	
+	  function fileReaderReady(reader) {
+	    return new Promise(function (resolve, reject) {
+	      reader.onload = function () {
+	        resolve(reader.result);
+	      };
+	      reader.onerror = function () {
+	        reject(reader.error);
+	      };
+	    });
+	  }
+	
+	  function readBlobAsArrayBuffer(blob) {
+	    var reader = new FileReader();
+	    reader.readAsArrayBuffer(blob);
+	    return fileReaderReady(reader);
+	  }
+	
+	  function readBlobAsText(blob) {
+	    var reader = new FileReader();
+	    reader.readAsText(blob);
+	    return fileReaderReady(reader);
+	  }
+	
+	  function Body() {
+	    this.bodyUsed = false;
+	
+	    this._initBody = function (body) {
+	      this._bodyInit = body;
+	      if (typeof body === 'string') {
+	        this._bodyText = body;
+	      } else if (support.blob && Blob.prototype.isPrototypeOf(body)) {
+	        this._bodyBlob = body;
+	      } else if (support.formData && FormData.prototype.isPrototypeOf(body)) {
+	        this._bodyFormData = body;
+	      } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+	        this._bodyText = body.toString();
+	      } else if (!body) {
+	        this._bodyText = '';
+	      } else if (support.arrayBuffer && ArrayBuffer.prototype.isPrototypeOf(body)) {
+	        // Only support ArrayBuffers for POST method.
+	        // Receiving ArrayBuffers happens via Blobs, instead.
+	      } else {
+	        throw new Error('unsupported BodyInit type');
+	      }
+	
+	      if (!this.headers.get('content-type')) {
+	        if (typeof body === 'string') {
+	          this.headers.set('content-type', 'text/plain;charset=UTF-8');
+	        } else if (this._bodyBlob && this._bodyBlob.type) {
+	          this.headers.set('content-type', this._bodyBlob.type);
+	        } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+	          this.headers.set('content-type', 'application/x-www-form-urlencoded;charset=UTF-8');
+	        }
+	      }
+	    };
+	
+	    if (support.blob) {
+	      this.blob = function () {
+	        var rejected = consumed(this);
+	        if (rejected) {
+	          return rejected;
+	        }
+	
+	        if (this._bodyBlob) {
+	          return Promise.resolve(this._bodyBlob);
+	        } else if (this._bodyFormData) {
+	          throw new Error('could not read FormData body as blob');
+	        } else {
+	          return Promise.resolve(new Blob([this._bodyText]));
+	        }
+	      };
+	
+	      this.arrayBuffer = function () {
+	        return this.blob().then(readBlobAsArrayBuffer);
+	      };
+	
+	      this.text = function () {
+	        var rejected = consumed(this);
+	        if (rejected) {
+	          return rejected;
+	        }
+	
+	        if (this._bodyBlob) {
+	          return readBlobAsText(this._bodyBlob);
+	        } else if (this._bodyFormData) {
+	          throw new Error('could not read FormData body as text');
+	        } else {
+	          return Promise.resolve(this._bodyText);
+	        }
+	      };
+	    } else {
+	      this.text = function () {
+	        var rejected = consumed(this);
+	        return rejected ? rejected : Promise.resolve(this._bodyText);
+	      };
+	    }
+	
+	    if (support.formData) {
+	      this.formData = function () {
+	        return this.text().then(decode);
+	      };
+	    }
+	
+	    this.json = function () {
+	      return this.text().then(JSON.parse);
+	    };
+	
+	    return this;
+	  }
+	
+	  // HTTP methods whose capitalization should be normalized
+	  var methods = ['DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'];
+	
+	  function normalizeMethod(method) {
+	    var upcased = method.toUpperCase();
+	    return methods.indexOf(upcased) > -1 ? upcased : method;
+	  }
+	
+	  function Request(input, options) {
+	    options = options || {};
+	    var body = options.body;
+	    if (Request.prototype.isPrototypeOf(input)) {
+	      if (input.bodyUsed) {
+	        throw new TypeError('Already read');
+	      }
+	      this.url = input.url;
+	      this.credentials = input.credentials;
+	      if (!options.headers) {
+	        this.headers = new Headers(input.headers);
+	      }
+	      this.method = input.method;
+	      this.mode = input.mode;
+	      if (!body) {
+	        body = input._bodyInit;
+	        input.bodyUsed = true;
+	      }
+	    } else {
+	      this.url = input;
+	    }
+	
+	    this.credentials = options.credentials || this.credentials || 'omit';
+	    if (options.headers || !this.headers) {
+	      this.headers = new Headers(options.headers);
+	    }
+	    this.method = normalizeMethod(options.method || this.method || 'GET');
+	    this.mode = options.mode || this.mode || null;
+	    this.referrer = null;
+	
+	    if ((this.method === 'GET' || this.method === 'HEAD') && body) {
+	      throw new TypeError('Body not allowed for GET or HEAD requests');
+	    }
+	    this._initBody(body);
+	  }
+	
+	  Request.prototype.clone = function () {
+	    return new Request(this);
+	  };
+	
+	  function decode(body) {
+	    var form = new FormData();
+	    body.trim().split('&').forEach(function (bytes) {
+	      if (bytes) {
+	        var split = bytes.split('=');
+	        var name = split.shift().replace(/\+/g, ' ');
+	        var value = split.join('=').replace(/\+/g, ' ');
+	        form.append(decodeURIComponent(name), decodeURIComponent(value));
+	      }
+	    });
+	    return form;
+	  }
+	
+	  function headers(xhr) {
+	    var head = new Headers();
+	    var pairs = (xhr.getAllResponseHeaders() || '').trim().split('\n');
+	    pairs.forEach(function (header) {
+	      var split = header.trim().split(':');
+	      var key = split.shift().trim();
+	      var value = split.join(':').trim();
+	      head.append(key, value);
+	    });
+	    return head;
+	  }
+	
+	  Body.call(Request.prototype);
+	
+	  function Response(bodyInit, options) {
+	    if (!options) {
+	      options = {};
+	    }
+	
+	    this.type = 'default';
+	    this.status = options.status;
+	    this.ok = this.status >= 200 && this.status < 300;
+	    this.statusText = options.statusText;
+	    this.headers = options.headers instanceof Headers ? options.headers : new Headers(options.headers);
+	    this.url = options.url || '';
+	    this._initBody(bodyInit);
+	  }
+	
+	  Body.call(Response.prototype);
+	
+	  Response.prototype.clone = function () {
+	    return new Response(this._bodyInit, {
+	      status: this.status,
+	      statusText: this.statusText,
+	      headers: new Headers(this.headers),
+	      url: this.url
+	    });
+	  };
+	
+	  Response.error = function () {
+	    var response = new Response(null, { status: 0, statusText: '' });
+	    response.type = 'error';
+	    return response;
+	  };
+	
+	  var redirectStatuses = [301, 302, 303, 307, 308];
+	
+	  Response.redirect = function (url, status) {
+	    if (redirectStatuses.indexOf(status) === -1) {
+	      throw new RangeError('Invalid status code');
+	    }
+	
+	    return new Response(null, { status: status, headers: { location: url } });
+	  };
+	
+	  self.Headers = Headers;
+	  self.Request = Request;
+	  self.Response = Response;
+	
+	  self.fetch = function (input, init) {
+	    return new Promise(function (resolve, reject) {
+	      var request;
+	      if (Request.prototype.isPrototypeOf(input) && !init) {
+	        request = input;
+	      } else {
+	        request = new Request(input, init);
+	      }
+	
+	      var xhr = new XMLHttpRequest();
+	
+	      function responseURL() {
+	        if ('responseURL' in xhr) {
+	          return xhr.responseURL;
+	        }
+	
+	        // Avoid security warnings on getResponseHeader when not allowed by CORS
+	        if (/^X-Request-URL:/m.test(xhr.getAllResponseHeaders())) {
+	          return xhr.getResponseHeader('X-Request-URL');
+	        }
+	
+	        return;
+	      }
+	
+	      xhr.onload = function () {
+	        var options = {
+	          status: xhr.status,
+	          statusText: xhr.statusText,
+	          headers: headers(xhr),
+	          url: responseURL()
+	        };
+	        var body = 'response' in xhr ? xhr.response : xhr.responseText;
+	        resolve(new Response(body, options));
+	      };
+	
+	      xhr.onerror = function () {
+	        reject(new TypeError('Network request failed'));
+	      };
+	
+	      xhr.ontimeout = function () {
+	        reject(new TypeError('Network request failed'));
+	      };
+	
+	      xhr.open(request.method, request.url, true);
+	
+	      if (request.credentials === 'include') {
+	        xhr.withCredentials = true;
+	      }
+	
+	      if ('responseType' in xhr && support.blob) {
+	        xhr.responseType = 'blob';
+	      }
+	
+	      request.headers.forEach(function (value, name) {
+	        xhr.setRequestHeader(name, value);
+	      });
+	
+	      xhr.send(typeof request._bodyInit === 'undefined' ? null : request._bodyInit);
+	    });
+	  };
+	  self.fetch.polyfill = true;
+	})(typeof self !== 'undefined' ? self : undefined);
+
+/***/ },
+/* 201 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	var React = __webpack_require__(1);
 	var connect = __webpack_require__(172).connect;
-	var actions = __webpack_require__(197);
+	var actions = __webpack_require__(198);
 	
 	var GuessSubmit = React.createClass({
 	    displayName: 'GuessSubmit',
@@ -23294,8 +23850,15 @@
 	    submitGuess: function submitGuess() {
 	        var guess = this.refs.textInput.value;
 	        this.props.dispatch(actions.addGuess(guess));
+	        if (this.props.feedback === 'Bingo!') {
+	            this.props.dispatch(actions.sendGuess(this.props.guesses.length));
+	        }
 	    },
-	
+	    componentDidUpdate: function componentDidUpdate() {
+	        if (this.props.feedback === 'Bingo!') {
+	            this.props.dispatch(actions.sendGuess(this.props.guesses.length));
+	        }
+	    },
 	    render: function render() {
 	
 	        return React.createElement(
@@ -23311,13 +23874,14 @@
 	    }
 	});
 	
-	// let mapStateToProps = (state, props) => {
-	//     return {
-	//         guesses: state.guesses
-	//     }
-	// }
+	var mapStateToProps = function mapStateToProps(state, props) {
+	    return {
+	        guesses: state.guesses,
+	        feedback: state.feedback
+	    };
+	};
 	
-	var Container = connect()(GuessSubmit);
+	var Container = connect(mapStateToProps)(GuessSubmit);
 	module.exports = Container;
 
 /***/ }

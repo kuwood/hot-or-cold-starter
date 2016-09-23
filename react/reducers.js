@@ -8,7 +8,8 @@ let initialGameState = {
     targetNum: randomInt(1, 101),
     feedback: "Make a Guess (numbers only)",
     guessCount: 0,
-    guesses: []
+    guesses: [],
+    fewestGuesses: null
 };
 
 let gameReducer = (state, action) => {
@@ -52,6 +53,10 @@ let gameReducer = (state, action) => {
           console.log('error you did something wrong')
         }
         return Object.assign({}, state, {guessCount: state.guessCount += 1, guesses: state.guesses.concat(action.number), feedback: feedback})
+    } else if (action.type === actions.FETCH_FEWEST_GUESSES) {
+        return Object.assign({}, state, {fewestGuesses: action.fewestGuesses})
+    } else if (action.type === actions.SAVE_FEWEST_GUESSES) {
+        return Object.assign({}, state, {fewestGuesses: action.fewestGuesses})
     }
     console.log(state);
     return state;
